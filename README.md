@@ -1,6 +1,7 @@
 # Slime WASM (Native)
 
 ![Slime WASM Screenshot](screenshot.png)
+
 This is a native WebAssembly port of the classic "Slime" simulation (originally a DOS C++ program). It runs directly in the browser without Emscripten or a heavy runtime, using a minimal custom C++ environment.
 
 ## Prerequisites

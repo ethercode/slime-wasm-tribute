@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slime WASM (Native)</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #eee;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            border: 2px solid #555;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+
+            /* Scale to fit viewport but maintain ratio */
+            /* Try to fill height first (common for desktop) but limit width */
+            height: 85vh;
+            width: auto;
+            max-width: 100vw;
+
+            display: block;
+            aspect-ratio: 320 / 200;
+        }
+
+        .controls {
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Slime - Native WASM</h1>
+    <canvas id="canvas" width="320" height="200"></canvas>
+    <div class="controls">
+        <p>Instructions: Click buttons to change tools. Left click to draw.</p>
+    </div>
+    <div id="tooltip"
+        style="position: fixed; display: none; background: rgba(0,0,0,0.8); color: white; padding: 5px; border: 1px solid #777; pointer-events: none; font-family: monospace;">
+        Tool Name</div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const width = 320;
+        const height = 200;
+
+        // VGA Palette validation (approximate)
+        const palette = [
+            [0, 0, 0], [0, 0, 170], [0, 170, 0], [0, 170, 170], [170, 0, 0], [170, 0, 170], [170, 85, 0], [170, 170, 170],
+            [85, 85, 85], [85, 85, 255], [85, 255, 85], [85, 255, 255], [255, 85, 85], [255, 85, 255], [255, 255, 85], [255, 255, 255]
+        ];
+
+        // Tool definitions for tooltip
+        const tools = [
+            { y1: 2, y2: 19, name: "Rain Mode (Toggle)" },
+            { y1: 27, y2: 44, name: "Pencil (Draw Wall)" },
+            { y1: 47, y2: 64, name: "Eraser (Wall)" },
+            { y1: 67, y2: 84, name: "Eraser (Water)" },
+            { y1: 92, y2: 109, name: "Line Mode" },
+            { y1: 112, y2: 129, name: "Freehand Mode" },
+            { y1: 137, y2: 154, name: "Pause (Toggle)" },
+            { y1: 158, y2: 166, name: "Clear Lines" },
+            { y1: 169, y2: 177, name: "Clear Water" },
+            { y1: 181, y2: 198, name: "Reset Game" }
+        ];
+
+        // Imports for WASM
+        const imports = {
+            env: {
+                random_int: (max) => Math.floor(Math.random() * max),
+                console_log: (val) => console.log(val),
+                get_time_ms: () => Date.now(),
+                sin: Math.sin,
+                cos: Math.cos,
+                fabs: Math.abs,
+                _Znwm: (size) => 0, // Allocator stub
+                __cxa_atexit: () => 0
+            }
+        };
+
+        let wasmExports = null;
+        let memory = null;
+
+        fetch('slime.wasm')
+            .then(response => response.arrayBuffer())
+            .then(bytes => WebAssembly.instantiate(bytes, imports))
+            .then(results => {
+                wasmExports = results.instance.exports;
+                memory = wasmExports.memory;
+                wasmExports.init();
+                requestAnimationFrame(loop);
+            })
+            .catch(console.error);
+
+        function loop() {
+            if (!wasmExports) return;
+            wasmExports.update();
+            wasmExports.render();
+
+            const bufferPtr = wasmExports.get_video_buffer();
+            const buffer = new Uint8ClampedArray(memory.buffer, bufferPtr, width * height * 4);
+            const imageData = new ImageData(buffer, width, height);
+            ctx.putImageData(imageData, 0, 0);
+
+            requestAnimationFrame(loop);
+        }
+
+        // Input Handling
+        function getGameCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Since we enforce aspect-ratio in CSS, we can just scale simply
+            const x = Math.floor(((e.clientX - rect.left) / rect.width) * width);
+            const y = Math.floor(((e.clientY - rect.top) / rect.height) * height);
+            return { x, y };
+        }
+
+        function handleInput(e) {
+            if (!wasmExports) return;
+            const { x, y } = getGameCoordinates(e);
+            wasmExports.set_mouse_pos(x, y);
+
+            // Tooltip Logic
+            if (e.type === 'mousemove') {
+                if (x >= 300 && x < width && y >= 0 && y < height) {
+                    const tool = tools.find(t => y >= t.y1 && y <= t.y2);
+                    if (tool) {
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = (e.clientX + 15) + 'px';
+                        tooltip.style.top = (e.clientY + 15) + 'px';
+                        tooltip.textContent = tool.name;
+                    } else {
+                        tooltip.style.display = 'none';
+                    }
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            }
+        }
+
+        canvas.addEventListener('mousemove', handleInput);
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!wasmExports) return;
+            handleInput(e); // Ensure pos is updated on click
+            // 0: Left -> 1
+            // 2: Right -> 2
+            let btn = 0;
+            if (e.button === 0) btn = 1;
+            if (e.button === 2) btn = 2;
+            wasmExports.set_mouse_button(btn);
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!wasmExports) return;
+            wasmExports.set_mouse_button(0);
+        });
+
+        // Prevent context menu for right-click usage
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+    </script>
+</body>
+
+</html>
