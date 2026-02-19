@@ -167,6 +167,11 @@
             wasmExports.set_mouse_button(0);
         });
 
+        canvas.addEventListener('mouseleave', (e) => {
+            if (!wasmExports) return;
+            wasmExports.set_mouse_button(0);
+        });
+
         // Prevent context menu for right-click usage
         canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
