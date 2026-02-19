@@ -418,7 +418,7 @@ void addWater() {
   for (int qx = -t; qx <= t; qx++) {
     for (int qy = -t * 2; qy < 0; qy++) {
       if ((qy + mmy) >= 0) {
-        if (qx + mmx < 319 && qx + mmx > 0 && qy + mmy > 0 && qy + mmy < 200) {
+        if (qx + mmx < 299 && qx + mmx > 0 && qy + mmy > 0 && qy + mmy < 200) {
           if (field[qx + mmx][qy + mmy] < 99) {
             field[qx + mmx][qy + mmy] = random_int(5);
           }
@@ -705,8 +705,7 @@ void update() {
           mouse.x < FIELD_WIDTH) {
         // Preview logic would go here
       }
-      if ((mouse.leftDown == 0) && (mouse.oldLeftDown == 1) && input.hasLeft &&
-          mouse.x < FIELD_WIDTH) {
+      if ((mouse.leftDown == 0) && (mouse.oldLeftDown == 1) && input.hasLeft) {
         input.hasLeft = false;
         logic_line(input.x1, input.y1, mouse.x, mouse.y, 1);
       }
