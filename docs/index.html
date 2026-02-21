@@ -23,14 +23,19 @@
             border: 2px solid #555;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 
-            /* Scale to fit viewport but maintain ratio */
-            /* Try to fill height first (common for desktop) but limit width */
-            height: 85vh;
-            width: auto;
-            max-width: 100vw;
-
+            /*
+             * On landscape/desktop the height is the binding constraint:
+             *   width = 85vh × (320/200) fills the canvas to 85% screen height.
+             * On portrait mobile 95vw is smaller, so it wins and the canvas
+             * shrinks to fit without overflowing.
+             * aspect-ratio + height:auto handle the other dimension automatically.
+             */
             display: block;
             aspect-ratio: 320 / 200;
+            width: min(95vw, calc(85vh * 320 / 200));
+            height: auto;
+            touch-action: none;
+            /* let JS handle all touch events */
         }
 
         .controls {
@@ -175,6 +180,44 @@
         // Prevent context menu for right-click usage
         canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+        });
+
+        // ── Touch support ────────────────────────────────────────────────────
+        // Translate touch events into the same WASM calls used by mouse events.
+        // We always use the first active touch point.
+
+        function getTouchGameCoordinates(touch) {
+            // Reuse getGameCoordinates by synthesising the clientX/clientY it needs
+            return getGameCoordinates({ clientX: touch.clientX, clientY: touch.clientY });
+        }
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // stop ghost mouse events and page scroll
+            if (!wasmExports) return;
+            const touch = e.changedTouches[0];
+            const { x, y } = getTouchGameCoordinates(touch);
+            wasmExports.set_mouse_pos(x, y);
+            wasmExports.set_mouse_button(1); // treat as left-click
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!wasmExports) return;
+            const touch = e.changedTouches[0];
+            const { x, y } = getTouchGameCoordinates(touch);
+            wasmExports.set_mouse_pos(x, y);
+            // keep button state as-is (still held down)
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!wasmExports) return;
+            wasmExports.set_mouse_button(0); // release
+        }, { passive: false });
+
+        canvas.addEventListener('touchcancel', (e) => {
+            if (!wasmExports) return;
+            wasmExports.set_mouse_button(0);
         });
 
     </script>
