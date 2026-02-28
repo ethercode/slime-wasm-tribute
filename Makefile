@@ -9,7 +9,7 @@ BUILD_DIR = docs
 # -Wl,--export-all to export all functions for now (can be restricted later)
 # -Wl,--allow-undefined to allow unresolved symbols (we will import some from JS)
 # CFLAGS = --target=wasm32 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--allow-undefined -Wall
-CFLAGS = --target=wasm32 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--allow-undefined-file=imports.sym -Wall
+CFLAGS = --target=wasm32 -std=c++17 -O3 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--allow-undefined-file=imports.sym -Wall
 
 # Source files
 SRCS = src/button.cpp src/main.cpp src/mouse.cpp

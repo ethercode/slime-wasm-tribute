@@ -6,8 +6,7 @@
  * and 3D-style pressed/unpressed rendering.
  */
 
-#ifndef BUTTON_H
-#define BUTTON_H
+#pragma once
 
 #include "platform.h"
 
@@ -25,10 +24,10 @@ public:
 
   /**
    * @brief Set the button's icon from a 16x16 pixel map
-   * @param map Pointer to a 16x16 array of color indices
-   *            Color 16 is treated as transparent
+   * @param map Reference to a 16x16 array of color indices
+   *            Color TRANSPARENT_COLOR (16) is treated as transparent
    */
-  void setBlitMap(void *map);
+  void setBlitMap(const uint8_t (&map)[16][16]);
 
   /**
    * @brief Render the button to the screen
@@ -41,12 +40,10 @@ public:
   // Button rectangle (screen coordinates)
   int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 
-  int tag = 1;       ///< Identifier for button actions (Tool/Action enum value)
-  int isDown = 0;    ///< Current pressed state (0 = up, 1 = down)
-  int isToggler = 0; ///< If 1, button toggles state on click
+  int tag = 1; ///< Identifier for button actions (Tool/Action enum value)
+  bool isDown = false;    ///< Current pressed state
+  bool isToggler = false; ///< If true, button toggles state on click
 
 private:
   uint8_t blitMap[16][16]; ///< 16x16 icon bitmap (color indices)
 };
-
-#endif

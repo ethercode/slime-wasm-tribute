@@ -10,7 +10,7 @@
 extern TMouse mouse;
 
 /**
- * @brief Construct a new TButton with default white icon
+ * @brief Construct a new TButton with default blue icon
  */
 TButton::TButton() {
   for (int x = 0; x < 16; x++) {
@@ -23,7 +23,9 @@ TButton::TButton() {
 /**
  * @brief Copy a 16x16 icon into the button's blitMap
  */
-void TButton::setBlitMap(void *map) { memcpy(blitMap, map, sizeof(blitMap)); }
+void TButton::setBlitMap(const uint8_t (&map)[16][16]) {
+  memcpy(blitMap, map, sizeof(blitMap));
+}
 
 /**
  * @brief Render the button with 3D border effect and icon
@@ -36,7 +38,7 @@ void TButton::paint() {
   mouse.hide();
 
   // Draw 3D border effect
-  if (isDown == 0) {
+  if (!isDown) {
     // Button is up - light top/left, dark bottom/right
     drawline(x1, y1, x2, y1, DARKGRAY);
     drawline(x1, y1, x1, y2, DARKGRAY);
@@ -50,10 +52,10 @@ void TButton::paint() {
     drawline(x2, y2, x1, y2, DARKGRAY);
   }
 
-  // Blit the icon (color 16 = transparent)
+  // Blit the icon (TRANSPARENT_COLOR = skip)
   for (int x = 0; x < 16; x++) {
     for (int y = 0; y < 16; y++) {
-      if (blitMap[x][y] != 16) {
+      if (blitMap[x][y] != TRANSPARENT_COLOR) {
         putpixel(x1 + 1 + x, y1 + 1 + y, blitMap[x][y]);
       }
     }

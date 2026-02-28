@@ -7,12 +7,15 @@
  * the C++ code to compile to WASM without Emscripten or a full libc.
  */
 
-#ifndef PLATFORM_H
-#define PLATFORM_H
+#pragma once
 
 #include <stdint.h>
 
-#define NULL 0
+// =============================================================================
+// Minimal type aliases (no libc on wasm32)
+// =============================================================================
+
+using size_t = __SIZE_TYPE__;
 
 // =============================================================================
 // JS Imports - Functions provided by the JavaScript runtime
@@ -59,6 +62,7 @@ constexpr int DENSITY_FLOW = 2;       ///< Water mass transferred per flow step
 // VGA palette color indices
 constexpr int DARKGRAY = 8;
 constexpr int WHITE = 15;
+constexpr int TRANSPARENT_COLOR = 16; ///< Icon bitmap transparency key
 
 // =============================================================================
 // Bounds Checking Helpers
@@ -66,21 +70,31 @@ constexpr int WHITE = 15;
 
 /**
  * @brief Check if coordinates are within the simulation field
- * @param x X coordinate (0-299)
- * @param y Y coordinate (0-199)
+ * @param x X coordinate (0 to FIELD_WIDTH-1)
+ * @param y Y coordinate (0 to FIELD_HEIGHT-1)
  * @return true if within bounds
  */
-inline bool inField(int x, int y) {
+[[nodiscard]] constexpr bool inField(int x, int y) noexcept {
   return x >= 0 && x < FIELD_WIDTH && y >= 0 && y < FIELD_HEIGHT;
 }
 
 /**
+ * @brief Check if coordinates are within the interior of the simulation field
+ * @param x X coordinate (1 to FIELD_WIDTH-2)
+ * @param y Y coordinate (1 to FIELD_HEIGHT-2)
+ * @return true if within interior bounds (excludes border cells)
+ */
+[[nodiscard]] constexpr bool inFieldInterior(int x, int y) noexcept {
+  return x > 0 && x < FIELD_WIDTH - 1 && y > 0 && y < FIELD_HEIGHT - 1;
+}
+
+/**
  * @brief Check if coordinates are within the screen
- * @param x X coordinate (0-319)
- * @param y Y coordinate (0-199)
+ * @param x X coordinate (0 to SCREEN_WIDTH-1)
+ * @param y Y coordinate (0 to SCREEN_HEIGHT-1)
  * @return true if within bounds
  */
-inline bool inScreen(int x, int y) {
+[[nodiscard]] constexpr bool inScreen(int x, int y) noexcept {
   return x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT;
 }
 
@@ -88,38 +102,45 @@ inline bool inScreen(int x, int y) {
 // Minimal Libc Replacements
 // =============================================================================
 
-inline int abs(int x) { return x < 0 ? -x : x; }
-inline double abs(double x) { return x < 0 ? -x : x; }
+[[nodiscard]] constexpr int abs(int x) noexcept { return x < 0 ? -x : x; }
+[[nodiscard]] constexpr double abs(double x) noexcept { return x < 0 ? -x : x; }
 
-inline void *memset(void *dst, int c, unsigned long n) {
-  uint8_t *d = (uint8_t *)dst;
+inline void *memset(void *dst, int c, size_t n) noexcept {
+  auto *d = static_cast<uint8_t *>(dst);
   while (n--)
-    *d++ = c;
+    *d++ = static_cast<uint8_t>(c);
   return dst;
 }
 
-inline void *memcpy(void *dst, const void *src, unsigned long n) {
-  uint8_t *d = (uint8_t *)dst;
-  const uint8_t *s = (const uint8_t *)src;
+inline void *memcpy(void *dst, const void *src, size_t n) noexcept {
+  auto *d = static_cast<uint8_t *>(dst);
+  const auto *s = static_cast<const uint8_t *>(src);
   while (n--)
     *d++ = *s++;
   return dst;
 }
 
-inline unsigned long strlen(const char *s) {
-  unsigned long len = 0;
+[[nodiscard]] inline size_t strlen(const char *s) noexcept {
+  size_t len = 0;
   while (*s++)
     len++;
   return len;
 }
 
-inline char *strncpy(char *dst, const char *src, unsigned long n) {
+inline char *strncpy(char *dst, const char *src, size_t n) noexcept {
   char *d = dst;
   while (n-- && *src)
     *d++ = *src++;
   while (n--)
     *d++ = 0;
   return dst;
+}
+
+/// Swap two integers by reference
+inline void swap(int &a, int &b) noexcept {
+  int tmp = a;
+  a = b;
+  b = tmp;
 }
 
 // =============================================================================
@@ -132,13 +153,8 @@ void putpixel(int x, int y, int c);
 /// Fill a rectangle with the default bar color
 void bar(int x1, int y1, int x2, int y2);
 
-/// Draw a line between two points
+/// Draw a white line between two points
 void line(int x1, int y1, int x2, int y2);
 
 /// Draw a colored line (used for UI borders)
-void drawline(float zx1, float zy1, float zx2, float zy2, int col);
-
-/// Swap two integer values
-void swap(int *a, int *b);
-
-#endif
+void drawline(int x1, int y1, int x2, int y2, int col);

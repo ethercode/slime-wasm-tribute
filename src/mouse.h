@@ -6,8 +6,7 @@
  * Reads from global input variables set by JavaScript.
  */
 
-#ifndef MOUSE_H
-#define MOUSE_H
+#pragma once
 
 #include "platform.h"
 
@@ -51,24 +50,17 @@ public:
    * @param y1 Top edge
    * @param x2 Right edge
    * @param y2 Bottom edge
-   * @return 1 if inside, 0 if outside
+   * @return true if inside, false if outside
    */
-  int checkInside(int x1, int y1, int x2, int y2);
-
-  /**
-   * @brief Hide cursor if inside rectangle (legacy API)
-   */
-  void hide(int x1, int y1, int x2, int y2);
+  [[nodiscard]] bool checkInside(int x1, int y1, int x2, int y2) const;
 
   // Current cursor position
   int x = 0;
   int y = 0;
 
-  int visible = 0;      ///< Cursor visibility flag
-  int leftDown = 0;     ///< Current left button state
-  int rightDown = 0;    ///< Current right button state
-  int oldLeftDown = 0;  ///< Previous frame left button state
-  int oldRightDown = 0; ///< Previous frame right button state
+  bool visible = false;      ///< Cursor visibility flag
+  bool leftDown = false;     ///< Current left button state
+  bool rightDown = false;    ///< Current right button state
+  bool oldLeftDown = false;  ///< Previous frame left button state
+  bool oldRightDown = false; ///< Previous frame right button state
 };
-
-#endif
