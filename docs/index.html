@@ -97,6 +97,7 @@
 
         let wasmExports = null;
         let memory = null;
+        let videoView = null; // cached view — memory never grows in -nostdlib builds
 
         fetch('slime.wasm')
             .then(response => response.arrayBuffer())
@@ -105,6 +106,11 @@
                 wasmExports = results.instance.exports;
                 memory = wasmExports.memory;
                 wasmExports.init();
+
+                // Cache the video buffer view once (no dynamic allocation = no memory growth)
+                const bufferPtr = wasmExports.get_video_buffer();
+                videoView = new Uint8ClampedArray(memory.buffer, bufferPtr, width * height * 4);
+
                 requestAnimationFrame(loop);
             })
             .catch(console.error);
@@ -114,10 +120,7 @@
             wasmExports.update();
             wasmExports.render();
 
-            const bufferPtr = wasmExports.get_video_buffer();
-            const buffer = new Uint8ClampedArray(memory.buffer, bufferPtr, width * height * 4);
-            const imageData = new ImageData(buffer, width, height);
-            ctx.putImageData(imageData, 0, 0);
+            ctx.putImageData(new ImageData(videoView, width, height), 0, 0);
 
             requestAnimationFrame(loop);
         }

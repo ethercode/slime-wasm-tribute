@@ -106,18 +106,13 @@ constexpr int TRANSPARENT_COLOR = 16; ///< Icon bitmap transparency key
 [[nodiscard]] constexpr double abs(double x) noexcept { return x < 0 ? -x : x; }
 
 inline void *memset(void *dst, int c, size_t n) noexcept {
-  auto *d = static_cast<uint8_t *>(dst);
-  while (n--)
-    *d++ = static_cast<uint8_t>(c);
-  return dst;
+  return __builtin_memset(dst, c,
+                          n); // emits WASM memory.fill with -mbulk-memory
 }
 
 inline void *memcpy(void *dst, const void *src, size_t n) noexcept {
-  auto *d = static_cast<uint8_t *>(dst);
-  const auto *s = static_cast<const uint8_t *>(src);
-  while (n--)
-    *d++ = *s++;
-  return dst;
+  return __builtin_memcpy(dst, src,
+                          n); // emits WASM memory.copy with -mbulk-memory
 }
 
 [[nodiscard]] inline size_t strlen(const char *s) noexcept {
